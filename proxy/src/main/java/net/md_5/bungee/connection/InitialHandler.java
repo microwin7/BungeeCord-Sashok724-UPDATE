@@ -2,7 +2,10 @@ package net.md_5.bungee.connection;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.Gson;
+import com.mojang.authlib.yggdrasil.CompatBridge;
+import com.mojang.authlib.yggdrasil.CompatProfile;
 import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -10,6 +13,8 @@ import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import javax.crypto.SecretKey;
 import lombok.Getter;
@@ -37,7 +42,6 @@ import net.md_5.bungee.api.event.PreLoginEvent;
 import net.md_5.bungee.api.event.ProxyPingEvent;
 import net.md_5.bungee.api.event.ServerConnectEvent;
 import net.md_5.bungee.chat.ComponentSerializer;
-import net.md_5.bungee.http.HttpClient;
 import net.md_5.bungee.jni.cipher.BungeeCipher;
 import net.md_5.bungee.netty.ChannelWrapper;
 import net.md_5.bungee.netty.HandlerBoss;
@@ -105,6 +109,9 @@ public class InitialHandler extends PacketHandler implements PendingConnection
     private boolean legacy;
     @Getter
     private String extraDataInHandshake = "";
+    @Getter
+    private ExecutorService loginExecutor = Executors.newCachedThreadPool( ( new ThreadFactoryBuilder() ).setNameFormat( "Login Thread #%1$d" ).setDaemon( true ).build() );
+
 
     @Override
     public boolean shouldHandle(PacketWrapper packet) throws Exception
@@ -411,6 +418,7 @@ public class InitialHandler extends PacketHandler implements PendingConnection
         bungee.getPluginManager().callEvent( new PreLoginEvent( InitialHandler.this, callback ) );
     }
 
+    @SuppressWarnings({"checkstyle:WhitespaceAround", "checkstyle:LeftCurly"})
     @Override
     public void handle(final EncryptionResponse encryptResponse) throws Exception
     {
@@ -432,7 +440,33 @@ public class InitialHandler extends PacketHandler implements PendingConnection
         {
             sha.update( bit );
         }
-        String encodedHash = URLEncoder.encode( new BigInteger( sha.digest() ).toString( 16 ), "UTF-8" );
+
+        String username = this.getName();
+        String serverID = ( new BigInteger( sha.digest() ) ).toString( 16 );
+        this.loginExecutor.submit( () ->
+        {
+            try
+            {
+                CompatProfile properties = CompatBridge.checkServer( username, serverID );
+                if ( properties != null )
+                {
+                    this.uniqueId = properties.uuid;
+                    this.loginProfile = new LoginResult( properties );
+                    this.finish();
+                } else
+                {
+                    this.disconnect( "Bad Login (Serverside)" );
+                    return;
+                }
+
+            } catch ( Exception var4 )
+            {
+                this.disconnect( "Authentication failed" );
+                this.bungee.getLogger().log( Level.SEVERE, "Error authenticating " + username + " with Launcher", var4 );
+            }
+
+        } );
+        /*String encodedHash = URLEncoder.encode( new BigInteger( sha.digest() ).toString( 16 ), "UTF-8" );
 
         String preventProxy = ( BungeeCord.getInstance().config.isPreventProxyConnections() && getSocketAddress() instanceof InetSocketAddress ) ? "&ip=" + URLEncoder.encode( getAddress().getAddress().getHostAddress(), "UTF-8" ) : "";
         String authURL = "https://sessionserver.mojang.com/session/minecraft/hasJoined?username=" + encName + "&serverId=" + encodedHash + preventProxy;
@@ -462,7 +496,7 @@ public class InitialHandler extends PacketHandler implements PendingConnection
             }
         };
 
-        HttpClient.get( authURL, ch.getHandle().eventLoop(), handler );
+        HttpClient.get( authURL, ch.getHandle().eventLoop(), handler );*/
     }
 
     private void finish()

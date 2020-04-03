@@ -2,7 +2,7 @@
 .classpath
 .project
 .settings/
-
+*Launcher.jar
 # netbeans
 nbproject/
 nbactions.xml

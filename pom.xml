@@ -30,6 +30,8 @@
         </developer>
     </developers>
 
+
+
     <modules>
         <module>api</module>
         <module>bootstrap</module>
@@ -97,6 +99,13 @@
             <artifactId>lombok</artifactId>
             <version>1.18.10</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.mojang.authlib</groupId>
+            <artifactId>authlib</artifactId>
+            <version>1.0.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/Launcher.jar</systemPath>
         </dependency>
     </dependencies>
 
