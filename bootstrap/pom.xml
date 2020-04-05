@@ -45,7 +45,9 @@
                 <configuration>
                     <archive>
                         <manifestEntries>
-                            <Main-Class>net.md_5.bungee.Bootstrap</Main-Class> 
+                            <Class-Path>Launcher.jar</Class-Path>
+                            <Built-By>microwin7</Built-By>
+                            <Main-Class>net.md_5.bungee.Bootstrap</Main-Class>
                             <Implementation-Version>${describe}</Implementation-Version>
                             <Specification-Version>${maven.build.timestamp}</Specification-Version>
                         </manifestEntries>

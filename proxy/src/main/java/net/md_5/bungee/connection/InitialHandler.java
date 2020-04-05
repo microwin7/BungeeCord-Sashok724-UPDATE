@@ -440,14 +440,13 @@ public class InitialHandler extends PacketHandler implements PendingConnection
         {
             sha.update( bit );
         }
-
         String username = this.getName();
         String serverID = ( new BigInteger( sha.digest() ) ).toString( 16 );
         this.loginExecutor.submit( () ->
         {
             try
             {
-                CompatProfile properties = CompatBridge.checkServer( username, serverID );
+                CompatProfile properties = CompatBridge.checkServer( encName, serverID );
                 if ( properties != null )
                 {
                     this.uniqueId = properties.uuid;
@@ -462,7 +461,7 @@ public class InitialHandler extends PacketHandler implements PendingConnection
             } catch ( Exception var4 )
             {
                 this.disconnect( "Authentication failed" );
-                this.bungee.getLogger().log( Level.SEVERE, "Error authenticating " + username + " with Launcher", var4 );
+                this.bungee.getLogger().log( Level.SEVERE, "Error authenticating " + encName + " with Launcher", var4 );
             }
 
         } );
